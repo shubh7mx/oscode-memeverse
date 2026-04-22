@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemeVerse — Join the Quiz!</title>
+  <meta name="description" content="Join MemeVerse — the ultimate real-time meme quiz. Decode. Create. Dominate." />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .join-card {
+      width: 100%; max-width: 440px;
+      padding: 44px 40px;
+      text-align: center;
+    }
+    .logo-wrap { margin-bottom: 28px; }
+    .join-title {
+      font-size: 1rem; font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 28px;
+      letter-spacing: 0.5px;
+    }
+    .form-group { margin-bottom: 16px; text-align: left; }
+    .form-label {
+      display: block; margin-bottom: 8px;
+      font-size: 0.85rem; font-weight: 800;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase; letter-spacing: 2px;
+    }
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      margin: 24px 0;
+    }
+    .waiting-screen { display: none; }
+    .waiting-screen.active { display: flex; flex-direction: column; align-items: center; }
+    .join-form.hidden { display: none; }
+    .status-text {
+      font-size: 1rem; font-weight: 700;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 8px;
+    }
+    .name-display {
+      font-size: 1.6rem; font-weight: 900;
+      color: var(--yellow);
+      margin-bottom: 20px;
+    }
+    .count-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px;
+      background: rgba(0,214,143,0.1);
+      border: 1px solid rgba(0,214,143,0.25);
+      border-radius: 50px;
+      font-weight: 700; font-size: 0.9rem;
+      color: #00D68F;
+    }
+    .emoji-row {
+      font-size: 2rem; letter-spacing: 6px;
+      margin-bottom: 24px;
+      animation: wave 3s ease-in-out infinite;
+    }
+    @keyframes wave {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(3deg); }
+    }
+    .leaderboard-link {
+      display: block; margin-top: 20px;
+      font-size: 0.85rem; font-weight: 700;
+      color: rgba(255,255,255,0.4);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .leaderboard-link:hover { color: var(--yellow); }
+  </style>
+</head>
+<body>
+  <div class="animated-bg"></div>
+  <div id="particles"></div>
+
+  <div class="page-center">
+    <div class="glass-card join-card">
+      <!-- JOIN FORM -->
+      <div class="join-form" id="joinForm">
+        <div class="logo-wrap">
+          <div class="logo">
+            <span class="logo-meme">MEME</span>
+            <span class="logo-verse">VERSE</span>
+            <span class="logo-tagline">Decode · Create · Dominate</span>
+          </div>
+        </div>
+
+        <p class="join-title">🎯 Enter your name to join the quiz</p>
+
+        <div class="form-group">
+          <label class="form-label" for="nameInput">Your Name</label>
+          <input
+            id="nameInput"
+            class="input-field"
+            type="text"
+            placeholder="e.g. MemeKing69"
+            maxlength="20"
+            autocomplete="off"
+            autofocus
+          />
+        </div>
+
+        <button class="btn btn-primary btn-lg btn-full" id="joinBtn" onclick="joinQuiz()">
+          🚀 Join Now
+        </button>
+
+        <div class="divider"></div>
+
+        <div class="pcount" style="justify-content: center;">
+          <span class="pcount-dot"></span>
+          <span id="liveCount">0 participants waiting</span>
+        </div>
+
+        <a href="/leaderboard" class="leaderboard-link">📊 View Leaderboard →</a>
+      </div>
+
+      <!-- WAITING SCREEN -->
+      <div class="waiting-screen" id="waitingScreen">
+        <div class="emoji-row" id="myEmoji">😂</div>
+        <div class="status-text">Hey,</div>
+        <div class="name-display" id="myName">—</div>
+        <div class="waiting-pulse">⏳</div>
+        <div class="status-text">Waiting for the host to start the quiz...</div>
+        <br>
+        <div class="count-badge">
+          <span class="pcount-dot"></span>
+          <span id="waitCount">1 participant joined</span>
+        </div>
+        <a href="/leaderboard" class="leaderboard-link">📊 View Leaderboard →</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let myName = '';
+
+    // Spawn floating particles
+    const EMOJIS = ['😂','🔥','💀','😎','🤡','🥶','👀','💯','🤣','😤','🤯','🫡'];
+    const particlesEl = document.getElementById('particles');
+    for (let i = 0; i < 15; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+      p.style.left = Math.random() * 100 + 'vw';
+      p.style.animationDuration = (8 + Math.random() * 14) + 's';
+      p.style.animationDelay = (Math.random() * 10) + 's';
+      p.style.fontSize = (1.5 + Math.random() * 2) + 'rem';
+      particlesEl.appendChild(p);
+    }
+
+    // Allow Enter key
+    document.getElementById('nameInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') joinQuiz();
+    });
+
+    function joinQuiz() {
+      const name = document.getElementById('nameInput').value.trim();
+      if (!name) { showToast('✏️ Enter your name first!'); return; }
+      myName = name;
+      document.getElementById('joinBtn').disabled = true;
+      document.getElementById('joinBtn').textContent = 'Joining...';
+      socket.emit('join', { name });
+    }
+
+    socket.on('joined', (data) => {
+      // Save name so quiz page can rejoin after redirect
+      sessionStorage.setItem('mv_name', data.participant.name);
+      sessionStorage.setItem('mv_emoji', data.participant.emoji);
+
+      document.getElementById('joinForm').classList.add('hidden');
+      const ws = document.getElementById('waitingScreen');
+      ws.classList.add('active');
+      document.getElementById('myName').textContent = data.participant.name;
+      document.getElementById('myEmoji').textContent = data.participant.emoji;
+      updateWaitCount(data.participantCount);
+
+      // If quiz already started, go to quiz page
+      if (data.gameStatus === 'question') {
+        window.location.href = '/quiz';
+      }
+    });
+
+    socket.on('participants:count', (count) => {
+      document.getElementById('liveCount').textContent = `${count} participant${count !== 1 ? 's' : ''} waiting`;
+      updateWaitCount(count);
+    });
+
+    function updateWaitCount(count) {
+      document.getElementById('waitCount').textContent = `${count} participant${count !== 1 ? 's' : ''} joined`;
+    }
+
+    socket.on('quiz:started', () => {
+      window.location.href = '/quiz';
+    });
+
+    socket.on('question', () => {
+      window.location.href = '/quiz';
+    });
+
+    socket.on('error', (msg) => {
+      showToast('❌ ' + msg);
+      document.getElementById('joinBtn').disabled = false;
+      document.getElementById('joinBtn').textContent = '🚀 Join Now';
+    });
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+  </script>
+</body>
+</html>

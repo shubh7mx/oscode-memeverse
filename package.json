@@ -1,0 +1,19 @@
+{
+  "name": "memeverse-next",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "bootstrap:appwrite": "node -r dotenv/config scripts/bootstrap-appwrite.mjs dotenv_config_path=.env.local"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "next": "16.2.4",
+    "node-appwrite": "^14.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "question": "Which meme format uses bold top and bottom text on a classic image?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/One_does_not_simply_meme_template.jpg/400px-One_does_not_simply_meme_template.jpg",
+    "options": ["Drake Pointing", "Impact Meme", "Distracted Boyfriend", "Doge"],
+    "answer": 1,
+    "timeLimit": 20
+  },
+  {
+    "id": 2,
+    "question": "Who is this famous meme dog?",
+    "image": "https://upload.wikimedia.org/wikipedia/en/5/5f/Original_Doge_meme.jpg",
+    "options": ["Harambe", "Doge", "Cheems", "Doggo"],
+    "answer": 1,
+    "timeLimit": 20
+  },
+  {
+    "id": 3,
+    "question": "What does this Distracted Boyfriend meme represent?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/e/e8/Distracted_Boyfriend_meme_resized.jpg",
+    "options": ["Loyalty", "Nostalgia", "Choosing something new over something old", "Working hard"],
+    "answer": 2,
+    "timeLimit": 25
+  },
+  {
+    "id": 4,
+    "question": "This gorilla became an internet legend after being tragically shot at a zoo. Who is it?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Silverback_Gorilla.jpg/400px-Silverback_Gorilla.jpg",
+    "options": ["Koko", "Harambe", "Bubbles", "Congo"],
+    "answer": 1,
+    "timeLimit": 20
+  },
+  {
+    "id": 5,
+    "question": "What is the name of this iconic troll meme face?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Trollface_non-free.png/400px-Trollface_non-free.png",
+    "options": ["Rage Face", "Troll Face", "Problem?", "U Mad Bro?"],
+    "answer": 1,
+    "timeLimit": 20
+  },
+  {
+    "id": 6,
+    "question": "What does GIF stand for?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Rotating_earth_%28large%29.gif/200px-Rotating_earth_%28large%29.gif",
+    "options": ["Graphics Interchange Format", "Global Image File", "General Imaging Framework", "Graphic Internet File"],
+    "answer": 0,
+    "timeLimit": 20
+  },
+  {
+    "id": 7,
+    "question": "Which platform first popularized the 'Virgin vs Chad' meme?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Chad_Transylvania.jpg/400px-Chad_Transylvania.jpg",
+    "options": ["Facebook", "4Chan / Reddit", "Twitter", "Instagram"],
+    "answer": 1,
+    "timeLimit": 20
+  },
+  {
+    "id": 8,
+    "question": "What does 'OG' mean in meme culture?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Camponotus_flavomarginatus_ant.jpg/400px-Camponotus_flavomarginatus_ant.jpg",
+    "options": ["Online Gaming", "Original Gangster", "One Goal", "Old Guy"],
+    "answer": 1,
+    "timeLimit": 15
+  },
+  {
+    "id": 9,
+    "question": "What year did the 'Harlem Shake' meme go viral?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Harlem_shake_sample.jpg/400px-Harlem_shake_sample.jpg",
+    "options": ["2010", "2011", "2013", "2015"],
+    "answer": 2,
+    "timeLimit": 20
+  },
+  {
+    "id": 10,
+    "question": "What animal appears in the famous 'This is Fine' meme?",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Everythingisfinesmall.jpg/400px-Everythingisfinesmall.jpg",
+    "options": ["Cat", "Dog", "Bear", "Fox"],
+    "answer": 1,
+    "timeLimit": 20
+  }
+]

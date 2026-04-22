@@ -1,0 +1,71 @@
+import { NextResponse } from "next/server";
+import { databases, ids } from "../../../../lib/server-appwrite";
+import { getParticipantAuth } from "../../../../lib/auth";
+import { buildParticipantQuestionView, getOrCreateSession, listQuestions } from "../../../../lib/server-quiz";
+import { QUIZ_RULES } from "../../../../lib/rules";
+import { applyQuestionOrder, runtimeState } from "../../../../lib/runtime-state";
+
+export async function GET() {
+  try {
+    const auth = await getParticipantAuth();
+    if (!auth) {
+      return NextResponse.json({ error: "Not joined" }, { status: 401 });
+    }
+
+    const [participant, session, allQuestions] = await Promise.all([
+      databases.getDocument(ids.databaseId, ids.participants, auth.id),
+      getOrCreateSession(),
+      listQuestions(),
+    ]);
+
+    if (participant.token !== auth.token) {
+      return NextResponse.json({ error: "Invalid participant auth" }, { status: 403 });
+    }
+
+    const cappedQuestions = allQuestions.slice(0, QUIZ_RULES.totalQuestions);
+    const questions = applyQuestionOrder(cappedQuestions);
+    const currentQuestion = questions[session.currentQuestionIndex] || null;
+    const currentIsGolden = !!(currentQuestion && runtimeState.goldenQuestionId && currentQuestion.$id === runtimeState.goldenQuestionId);
+    const questionEndsAtMs = session?.questionEndsAt ? new Date(session.questionEndsAt).getTime() : 0;
+    const questionEnded =
+      session.status === "live" &&
+      runtimeState.currentRound === "quiz" &&
+      !!currentQuestion &&
+      questionEndsAtMs > 0 &&
+      Date.now() >= questionEndsAtMs;
+
+    return NextResponse.json({
+      ok: true,
+      participant: {
+        id: participant.$id,
+        name: participant.name,
+        score: participant.score || 0,
+        lastAnsweredIndex: participant.lastAnsweredIndex,
+      },
+      session: {
+        status: session.status,
+        currentQuestionIndex: session.currentQuestionIndex,
+        questionEndsAt: session.questionEndsAt,
+      },
+      rules: {
+        ...QUIZ_RULES,
+        negativeMarking: runtimeState.negativeMarking,
+      },
+      goldenQuestionId: runtimeState.goldenQuestionId || null,
+      currentIsGolden,
+      currentRound: runtimeState.currentRound,
+      finalRound: runtimeState.finalRound,
+      totalQuestions: questions.length,
+      questionEnded,
+      revealAnswer: questionEnded,
+      correctOptionId: questionEnded && currentQuestion ? Number(currentQuestion.correctOption) : null,
+      alreadyAnswered: participant.lastAnsweredIndex === session.currentQuestionIndex,
+      question:
+        session.status === "live" && runtimeState.currentRound === "quiz"
+          ? buildParticipantQuestionView(currentQuestion, participant.$id)
+          : null,
+    });
+  } catch (e) {
+    return NextResponse.json({ error: e?.message || "State load failed" }, { status: 500 });
+  }
+}
