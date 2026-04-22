@@ -42,6 +42,8 @@ Official references:
 5. Deploy:
    - `npm run deploy`
 
+Last deploy trigger update: 2026-04-22
+
 ## Deploy from Cloudflare dashboard
 
 If you want Git-based deployment from Cloudflare's dashboard:
