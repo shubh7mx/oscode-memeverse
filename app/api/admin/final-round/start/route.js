@@ -14,6 +14,7 @@ export async function POST(req) {
     runtimeState.finalRound.topic = (body?.topic || "").trim();
     runtimeState.finalRound.creationMinutes = Math.max(3, Math.min(5, Number(body?.creationMinutes || 3)));
     runtimeState.finalRound.counterMemeAllowed = body?.counterMemeAllowed !== false;
+    runtimeState.finalRound.activeBattleId = "";
 
     await databases.updateDocument(ids.databaseId, ids.session, ids.sessionDocId, {
       status: "battle",

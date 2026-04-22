@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 export default function QuizPage() {
@@ -12,6 +11,8 @@ export default function QuizPage() {
   const [goldenBurst, setGoldenBurst] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState(null);
+  const [battleFile, setBattleFile] = useState(null);
+  const [battleUploading, setBattleUploading] = useState(false);
   const loadingRef = useRef(false);
   const prevQuestionIndexRef = useRef(-1);
 
@@ -110,6 +111,30 @@ export default function QuizPage() {
     setSubmitting(false);
   }
 
+  async function uploadBattleMeme() {
+    if (!battleFile || battleUploading) return;
+    setBattleUploading(true);
+    setFeedback("");
+
+    try {
+      const fd = new FormData();
+      fd.set("file", battleFile);
+      const res = await fetch("/api/final-round/upload", { method: "POST", body: fd });
+      const out = await res.json();
+      if (!res.ok) {
+        setFeedback(out.error || "Upload failed");
+      } else {
+        setFeedback("Meme uploaded. Waiting for the other team.");
+        setBattleFile(null);
+        await loadState();
+      }
+    } catch {
+      setFeedback("Upload failed");
+    }
+
+    setBattleUploading(false);
+  }
+
   async function leaveTeam() {
     try {
       await fetch("/api/participants/leave", { method: "POST" });
@@ -148,9 +173,11 @@ export default function QuizPage() {
   const questionKey = `${currentIndex}-${question?.id ?? "none"}`;
   const feedbackTone = feedback.startsWith("Correct")
     ? "positive"
-    : feedback.startsWith("Wrong") || feedback.startsWith("Time")
+    : feedback.startsWith("Wrong") || feedback.startsWith("Time") || feedback.includes("failed")
       ? "negative"
       : "neutral";
+  const battle = state?.battle;
+  const activeBattle = state?.activeBattle;
 
   return (
     <main className="container quiz-screen" suppressHydrationWarning>
@@ -158,30 +185,16 @@ export default function QuizPage() {
         <section className="quiz-hero">
           <div className="quiz-hero-copy">
             <div className="quiz-brand-row">
-              <p className="quiz-kicker">Live Meme Quiz</p>
               <h1 className="quiz-wordmark">
-                <span>MemeVerse</span>
+                <span className="quiz-wordmark-meme">Meme</span>
+                <span className="quiz-wordmark-verse">Verse</span>
               </h1>
             </div>
             <p className="quiz-tagline">Decode. Create. Dominate.</p>
           </div>
 
           <div className="quiz-toolbar">
-            <span className={`quiz-chip ${status === "live" ? "is-live" : ""}`}>Status: {status}</span>
-            <span className="quiz-chip">Score: {state?.participant?.score ?? 0}</span>
-            <span className={`quiz-chip ${state?.currentIsGolden ? "is-golden" : ""}`}>
-              {state?.currentIsGolden ? "Golden question" : "Normal question"}
-            </span>
             {isLiveQuestion ? <span className="quiz-chip">Progress: {questionCountLabel}</span> : null}
-            {isLiveQuestion ? <span className="quiz-chip">Mode: {revealAnswer ? "Reveal" : "Answering"}</span> : null}
-            {isLiveQuestion ? (
-              <span className={`quiz-chip ${urgent && !revealAnswer ? "is-live" : ""}`}>
-                {revealAnswer ? "Answer Reveal" : `${left}s left`}
-              </span>
-            ) : null}
-            <Link className="quiz-chip quiz-chip-link" href="/leaderboard">
-              Leaderboard
-            </Link>
             <button className="quiz-chip quiz-chip-button" type="button" onClick={leaveTeam}>
               Exit Quiz
             </button>
@@ -189,30 +202,106 @@ export default function QuizPage() {
         </section>
 
         {state?.currentRound === "battle" ? (
-          <section className="quiz-stage quiz-stage-final">
-            <div className="quiz-stage-head">
-              <div>
-                <p className="quiz-stage-label">Final Round</p>
-                <h2>Meme Battle</h2>
+          battle ? (
+            <section className="quiz-stage quiz-stage-final">
+              <div className="quiz-stage-head">
+                <div>
+                  <p className="quiz-stage-label">Head To Head</p>
+                  <h2>{battle.teamName} vs {battle.opponentName}</h2>
+                </div>
+                <span className="quiz-timer-pill">30 pts</span>
               </div>
-              <span className="quiz-timer-pill">30 pts</span>
-            </div>
 
-            <div className="quiz-final-grid">
-              <div className="quiz-final-card">
-                <p className="quiz-final-title">Topic</p>
-                <h3>{state?.finalRound?.topic || "To be announced"}</h3>
+              <div className="quiz-final-grid">
+                <div className="quiz-final-card">
+                  <p className="quiz-final-title">Theme</p>
+                  <h3>{battle.topic || "To be announced"}</h3>
+                </div>
+                <div className="quiz-final-card">
+                  <p className="quiz-final-title">Build Time</p>
+                  <h3>{battle.creationMinutes} minutes</h3>
+                </div>
+                <div className="quiz-final-card">
+                  <p className="quiz-final-title">Counter Meme</p>
+                  <h3>{battle.counterMemeAllowed ? "Allowed" : "Not allowed"}</h3>
+                </div>
               </div>
-              <div className="quiz-final-card">
-                <p className="quiz-final-title">Create Time</p>
-                <h3>{state?.finalRound?.creationMinutes || 3} minutes</h3>
+
+              {battle.status === "active" ? (
+                <div className="battle-upload-shell">
+                  <div className="battle-upload-card">
+                    <p className="quiz-stage-label">Your Upload</p>
+                    <h3>{battle.submitted ? "Meme submitted" : "Upload your meme"}</h3>
+                    {battle.submitted && battle.mySubmissionImageUrl ? (
+                      <img className="battle-upload-preview" src={battle.mySubmissionImageUrl} alt="your meme" />
+                    ) : (
+                      <>
+                        <input
+                          className="input"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setBattleFile(e.target.files?.[0] || null)}
+                        />
+                        <button className="btn btn-primary" type="button" onClick={uploadBattleMeme} disabled={!battleFile || battleUploading}>
+                          {battleUploading ? "Uploading..." : "Upload Meme"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="battle-upload-card">
+                    <p className="quiz-stage-label">Battle Status</p>
+                    <h3>{battle.opponentSubmitted ? `${battle.opponentName} uploaded` : `Waiting for ${battle.opponentName}`}</h3>
+                    <p className="small" style={{ marginBottom: 0 }}>
+                      Once both teams upload, admin will trigger result reveal.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="battle-reveal-shell">
+                  <div className="battle-reveal-theme">{battle.topic}</div>
+                  <div className="battle-versus-grid">
+                    <div className={`battle-meme-card ${battle.status === "reveal" ? "is-revealing" : "is-clear"} ${battle.winnerId && battle.winnerName === battle.teamName ? "is-winner" : ""}`}>
+                      <p className="battle-team-name">{battle.teamName}</p>
+                      <img className="battle-reveal-image" src={battle.mySubmissionImageUrl} alt={battle.teamName} />
+                    </div>
+                    <div className="battle-versus-text">VS</div>
+                    <div className={`battle-meme-card ${battle.status === "reveal" ? "is-revealing" : "is-clear"} ${battle.winnerId && battle.winnerName === battle.opponentName ? "is-winner" : ""}`}>
+                      <p className="battle-team-name">{battle.opponentName}</p>
+                      <img className="battle-reveal-image" src={battle.opponentSubmissionImageUrl} alt={battle.opponentName} />
+                    </div>
+                  </div>
+                  <div className="quiz-status-card">
+                    <span className="quiz-status-label">Battle Result</span>
+                    <strong>
+                      {battle.winnerName
+                        ? `${battle.winnerName} wins the head-to-head battle.`
+                        : "Reveal is live. Waiting for admin to choose the winner."}
+                    </strong>
+                  </div>
+                </div>
+              )}
+
+              {feedback ? (
+                <div className={`quiz-status-card tone-${feedbackTone}`} style={{ marginTop: 12 }}>
+                  <span className="quiz-status-label">Update</span>
+                  <strong>{feedback}</strong>
+                </div>
+              ) : null}
+            </section>
+          ) : (
+            <section className="quiz-stage quiz-empty-stage">
+              <div className="quiz-empty-state">
+                <p className="quiz-stage-label">Final Round</p>
+                <h2>{activeBattle ? "Another battle is in progress" : "Waiting for head-to-head battle"}</h2>
+                <p>
+                  {activeBattle
+                    ? `${activeBattle.teamAName} vs ${activeBattle.teamBName} is currently active.`
+                    : "Admin will start your match when it is your turn."}
+                </p>
               </div>
-              <div className="quiz-final-card">
-                <p className="quiz-final-title">Counter Meme</p>
-                <h3>{state?.finalRound?.counterMemeAllowed ? "Allowed" : "Not allowed"}</h3>
-              </div>
-            </div>
-          </section>
+            </section>
+          )
         ) : isLiveQuestion ? (
           <section className={`quiz-stage ${state?.currentIsGolden ? "is-golden-stage" : ""}`}>
             {goldenBurst ? (

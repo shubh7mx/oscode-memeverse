@@ -103,38 +103,6 @@ export default function HomePage() {
               {error ? <p style={{ color: "#cb1f1f", fontWeight: 800, margin: 0 }}>{error}</p> : null}
             </div>
           </div>
-
-          <details className="panel details-card">
-            <summary>
-              <span className="scribble purple">Round 1: Meme Quiz</span>
-              <span className="badge">20 points</span>
-            </summary>
-            <div className="details-body">
-              <ul className="compact-list">
-                <li>20 questions</li>
-                <li>10-15 sec per question</li>
-                <li>+1 points for correct</li>
-                <li>-1 for wrong</li>
-                <li>1 random golden question: +5 / -5</li>
-              </ul>
-            </div>
-          </details>
-
-          <details className="panel details-card">
-            <summary>
-              <span className="scribble blue">Final Round: Meme Battle</span>
-              <span className="badge">30 points</span>
-            </summary>
-            <div className="details-body">
-              <ul className="compact-list">
-                <li>Head-to-head battles</li>
-                <li>Topic revealed by admin</li>
-                <li>3-5 mins to create</li>
-                <li>Present your meme</li>
-                <li>Counter meme allowed (optional)</li>
-              </ul>
-            </div>
-          </details>
         </div>
 
         <p className="small" style={{ marginBottom: 0 }}>If already joined on this device, this page auto-sends to quiz.</p>

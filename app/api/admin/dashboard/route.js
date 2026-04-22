@@ -25,6 +25,8 @@ export async function GET() {
       name: d.name,
       score: d.score || 0,
       lastAnsweredIndex: d.lastAnsweredIndex,
+      joinedAt: d.joinedAt || null,
+      finished: !!d.finished,
     }));
 
     const currentQuestion = questions[session.currentQuestionIndex] || null;

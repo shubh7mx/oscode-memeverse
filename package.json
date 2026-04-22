@@ -7,13 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "bootstrap:appwrite": "node -r dotenv/config scripts/bootstrap-appwrite.mjs dotenv_config_path=.env.local"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.8.0",
     "dotenv": "^17.2.3",
     "next": "16.2.4",
     "node-appwrite": "^14.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.13.2"
   }
 }

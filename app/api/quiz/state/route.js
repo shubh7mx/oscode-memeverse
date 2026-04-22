@@ -3,7 +3,7 @@ import { databases, ids } from "../../../../lib/server-appwrite";
 import { getParticipantAuth } from "../../../../lib/auth";
 import { buildParticipantQuestionView, getOrCreateSession, listQuestions } from "../../../../lib/server-quiz";
 import { QUIZ_RULES } from "../../../../lib/rules";
-import { applyQuestionOrder, runtimeState } from "../../../../lib/runtime-state";
+import { applyQuestionOrder, getBattleForParticipant, getActiveBattle, runtimeState } from "../../../../lib/runtime-state";
 
 export async function GET() {
   try {
@@ -34,6 +34,40 @@ export async function GET() {
       questionEndsAtMs > 0 &&
       Date.now() >= questionEndsAtMs;
 
+    const participantBattle = getBattleForParticipant(participant.$id);
+    const activeBattle = getActiveBattle();
+    const battleForClient = participantBattle
+      ? {
+          id: participantBattle.id,
+          topic: participantBattle.topic,
+          status: participantBattle.status,
+          creationMinutes: participantBattle.creationMinutes,
+          counterMemeAllowed: participantBattle.counterMemeAllowed,
+          startedAt: participantBattle.startedAt,
+          revealStartedAt: participantBattle.revealStartedAt,
+          teamName: participantBattle.teamAId === participant.$id ? participantBattle.teamAName : participantBattle.teamBName,
+          opponentName: participantBattle.teamAId === participant.$id ? participantBattle.teamBName : participantBattle.teamAName,
+          submitted:
+            participantBattle.teamAId === participant.$id
+              ? !!participantBattle.teamASubmission?.imageUrl
+              : !!participantBattle.teamBSubmission?.imageUrl,
+          opponentSubmitted:
+            participantBattle.teamAId === participant.$id
+              ? !!participantBattle.teamBSubmission?.imageUrl
+              : !!participantBattle.teamASubmission?.imageUrl,
+          mySubmissionImageUrl:
+            participantBattle.teamAId === participant.$id
+              ? participantBattle.teamASubmission?.imageUrl || ""
+              : participantBattle.teamBSubmission?.imageUrl || "",
+          opponentSubmissionImageUrl:
+            participantBattle.teamAId === participant.$id
+              ? participantBattle.teamBSubmission?.imageUrl || ""
+              : participantBattle.teamASubmission?.imageUrl || "",
+          winnerId: participantBattle.winnerId || "",
+          winnerName: participantBattle.winnerName || "",
+        }
+      : null;
+
     return NextResponse.json({
       ok: true,
       participant: {
@@ -55,6 +89,16 @@ export async function GET() {
       currentIsGolden,
       currentRound: runtimeState.currentRound,
       finalRound: runtimeState.finalRound,
+      activeBattle: activeBattle
+        ? {
+            id: activeBattle.id,
+            teamAName: activeBattle.teamAName,
+            teamBName: activeBattle.teamBName,
+            topic: activeBattle.topic,
+            status: activeBattle.status,
+          }
+        : null,
+      battle: battleForClient,
       totalQuestions: questions.length,
       questionEnded,
       revealAnswer: questionEnded,

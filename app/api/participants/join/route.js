@@ -6,12 +6,23 @@ function normalizeName(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
 }
 
+function validateTeamName(name) {
+  if (!name) return "Name required";
+  if (name.length < 3) return "Use a proper team name";
+  if (/[@_#]/.test(name)) return "Use a team name, not a username";
+  if (!/[A-Za-z]/.test(name)) return "Team name must include letters";
+  if (/^[a-z0-9-]+$/.test(name)) return "Use a proper team name with spaces or title style";
+  if (!/^[A-Za-z0-9 '&.-]+$/.test(name)) return "Only letters, numbers, spaces and basic punctuation allowed";
+  return "";
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
     const name = normalizeName(body?.name);
-    if (!name) {
-      return NextResponse.json({ error: "Name required" }, { status: 400 });
+    const validationError = validateTeamName(name);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     // Idempotent join on same device.

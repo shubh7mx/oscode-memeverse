@@ -16,8 +16,8 @@ const blank = {
 };
 
 const blankBattle = {
-  teamA: "",
-  teamB: "",
+  teamAId: "",
+  teamBId: "",
   topic: "",
   creationMinutes: "3",
   counterMemeAllowed: true,
@@ -36,6 +36,7 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [tab, setTab] = useState("quiz");
+  const [selectedTeam, setSelectedTeam] = useState(null);
   const loadingRef = useRef(false);
 
   useEffect(() => {
@@ -91,6 +92,10 @@ export default function AdminPage() {
         return;
       }
       setData(out);
+      setSelectedTeam((prev) => {
+        if (!prev?.id) return prev;
+        return out.participants?.find((p) => p.id === prev.id) || null;
+      });
     } catch {
       setMsg("Dashboard failed");
     }
@@ -234,9 +239,9 @@ export default function AdminPage() {
 
   async function addBattle(e) {
     e.preventDefault();
-    await callAdmin("/api/admin/final-round/battles", "Battle added", {
-      teamA: battleForm.teamA,
-      teamB: battleForm.teamB,
+    await callAdmin("/api/admin/final-round/battles", "Battle started", {
+      teamAId: battleForm.teamAId,
+      teamBId: battleForm.teamBId,
       topic: battleForm.topic,
       creationMinutes: Number(battleForm.creationMinutes),
       counterMemeAllowed: battleForm.counterMemeAllowed,
@@ -244,8 +249,12 @@ export default function AdminPage() {
     setBattleForm(blankBattle);
   }
 
-  async function setBattleWinner(battleId, winnerName) {
-    await callAdmin(`/api/admin/final-round/battles/${battleId}/winner`, "Winner awarded (+30)", { winnerName });
+  async function showBattleResult(battleId) {
+    await callAdmin(`/api/admin/final-round/battles/${battleId}/reveal`, "Result reveal started");
+  }
+
+  async function setBattleWinner(battleId, winnerId) {
+    await callAdmin(`/api/admin/final-round/battles/${battleId}/winner`, "Winner awarded (+30)", { winnerId });
   }
 
   async function removeQuestion(id) {
@@ -263,10 +272,31 @@ export default function AdminPage() {
     setBusy(false);
   }
 
+  async function deleteTeam(id) {
+    setBusy(true);
+    setMsg("");
+    try {
+      const res = await fetch(`/api/admin/participants/${id}`, { method: "DELETE" });
+      const out = await res.json();
+      if (!res.ok) {
+        setMsg(out.error || "Delete failed");
+      } else {
+        setMsg("Team deleted");
+        setSelectedTeam((prev) => (prev?.id === id ? null : prev));
+      }
+      await loadDashboard();
+    } catch {
+      setMsg("Delete failed");
+    }
+    setBusy(false);
+  }
+
   const answered = useMemo(() => {
     if (!data?.participants || !data?.session) return 0;
     return data.participants.filter((p) => p.lastAnsweredIndex === data.session.currentQuestionIndex).length;
   }, [data]);
+
+  const availableTeams = data?.participants || [];
 
   if (checkingSession) {
     return (
@@ -324,6 +354,7 @@ export default function AdminPage() {
           <button className={`tab-btn ${tab === "quiz" ? "active" : ""}`} onClick={() => setTab("quiz")}>Rules + Quiz</button>
           <button className={`tab-btn ${tab === "final" ? "active" : ""}`} onClick={() => setTab("final")}>Final Round</button>
           <button className={`tab-btn ${tab === "questions" ? "active" : ""}`} onClick={() => setTab("questions")}>Questions</button>
+          <button className={`tab-btn ${tab === "teams" ? "active" : ""}`} onClick={() => setTab("teams")}>Teams</button>
         </div>
       </div>
 
@@ -375,12 +406,21 @@ export default function AdminPage() {
           </div>
 
           <div className="card" style={{ marginTop: 12 }}>
-            <h2 style={{ marginTop: 0 }}>Add Head-to-Head Battle</h2>
+            <h2 style={{ marginTop: 0 }}>Start Head-to-Head Battle</h2>
             <form className="responsive-grid-3" onSubmit={addBattle}>
-              <input className="input" placeholder="Team A name" value={battleForm.teamA} onChange={(e) => setBattleForm({ ...battleForm, teamA: e.target.value })} required />
-              <input className="input" placeholder="Team B name" value={battleForm.teamB} onChange={(e) => setBattleForm({ ...battleForm, teamB: e.target.value })} required />
-              <button className="btn btn-primary" type="submit" disabled={busy}>Add Battle</button>
+              <select value={battleForm.teamAId} onChange={(e) => setBattleForm({ ...battleForm, teamAId: e.target.value })} required>
+                <option value="">Select Team A</option>
+                {availableTeams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+              </select>
+              <select value={battleForm.teamBId} onChange={(e) => setBattleForm({ ...battleForm, teamBId: e.target.value })} required>
+                <option value="">Select Team B</option>
+                {availableTeams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+              </select>
+              <button className="btn btn-primary" type="submit" disabled={busy || data?.finalRound?.activeBattleId}>Start Battle</button>
             </form>
+            <p className="small" style={{ marginBottom: 0 }}>
+              Starting a battle sends only those two teams to the upload screen on their phones.
+            </p>
 
             {(data?.finalRound?.battles || []).length ? (
               <div className="table-scroll-box" style={{ marginTop: 10 }}>
@@ -390,20 +430,32 @@ export default function AdminPage() {
                       <th>Battle</th>
                       <th>Topic</th>
                       <th>Status</th>
+                      <th>Uploads</th>
                       <th>Winner</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(data?.finalRound?.battles || []).map((b) => (
                       <tr key={b.id}>
-                        <td>{b.teamA} vs {b.teamB}</td>
+                        <td>{b.teamAName} vs {b.teamBName}</td>
                         <td>{b.topic || data?.finalRound?.topic || "-"}</td>
                         <td>{b.status}</td>
                         <td>
+                          <div className="inline-actions">
+                            <span className="badge">{b.teamASubmission?.imageUrl ? `${b.teamAName}: uploaded` : `${b.teamAName}: waiting`}</span>
+                            <span className="badge">{b.teamBSubmission?.imageUrl ? `${b.teamBName}: uploaded` : `${b.teamBName}: waiting`}</span>
+                            {b.status === "active" ? (
+                              <button className="btn" disabled={busy || !b.teamASubmission?.imageUrl || !b.teamBSubmission?.imageUrl} onClick={() => showBattleResult(b.id)}>
+                                Show Result
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td>
                           {b.winnerName ? b.winnerName : (
                             <div className="inline-actions">
-                              <button className="btn" disabled={busy} onClick={() => setBattleWinner(b.id, b.teamA)}>{b.teamA} +30</button>
-                              <button className="btn" disabled={busy} onClick={() => setBattleWinner(b.id, b.teamB)}>{b.teamB} +30</button>
+                              <button className="btn" disabled={busy || b.status !== "reveal"} onClick={() => setBattleWinner(b.id, b.teamAId)}>{b.teamAName} +30</button>
+                              <button className="btn" disabled={busy || b.status !== "reveal"} onClick={() => setBattleWinner(b.id, b.teamBId)}>{b.teamBName} +30</button>
                             </div>
                           )}
                         </td>
@@ -556,6 +608,74 @@ export default function AdminPage() {
               </table>
             </div>
           </div>
+        </>
+      ) : null}
+
+      {tab === "teams" ? (
+        <>
+          <div className="card" style={{ marginTop: 12 }}>
+            <h2 style={{ marginTop: 0 }}>Joined Teams ({data?.participants?.length || 0})</h2>
+            <div className="table-scroll-box">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Team</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data?.participants || []).map((team) => (
+                    <tr key={team.id}>
+                      <td>{team.name}</td>
+                      <td>{team.score}</td>
+                      <td>{team.finished ? "Finished" : "Active"}</td>
+                      <td>
+                        <div className="inline-actions">
+                          <button className="btn" disabled={busy} onClick={() => setSelectedTeam(team)}>View</button>
+                          <button className="btn btn-danger" disabled={busy} onClick={() => deleteTeam(team.id)}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!(data?.participants || []).length ? <tr><td colSpan={4}>No teams joined yet</td></tr> : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {selectedTeam ? (
+            <div className="card" style={{ marginTop: 12 }}>
+              <h2 style={{ marginTop: 0 }}>Team Details</h2>
+              <div className="responsive-grid-2">
+                <div className="panel">
+                  <p style={{ marginTop: 0, marginBottom: 6, fontWeight: 900 }}>Team Name</p>
+                  <p style={{ margin: 0 }}>{selectedTeam.name}</p>
+                </div>
+                <div className="panel">
+                  <p style={{ marginTop: 0, marginBottom: 6, fontWeight: 900 }}>Score</p>
+                  <p style={{ margin: 0 }}>{selectedTeam.score}</p>
+                </div>
+                <div className="panel">
+                  <p style={{ marginTop: 0, marginBottom: 6, fontWeight: 900 }}>Last Answered Question</p>
+                  <p style={{ margin: 0 }}>
+                    {Number.isFinite(Number(selectedTeam.lastAnsweredIndex)) && Number(selectedTeam.lastAnsweredIndex) >= 0
+                      ? Number(selectedTeam.lastAnsweredIndex) + 1
+                      : "Not answered yet"}
+                  </p>
+                </div>
+                <div className="panel">
+                  <p style={{ marginTop: 0, marginBottom: 6, fontWeight: 900 }}>Joined At</p>
+                  <p style={{ margin: 0 }}>{selectedTeam.joinedAt || "-"}</p>
+                </div>
+                <div className="panel">
+                  <p style={{ marginTop: 0, marginBottom: 6, fontWeight: 900 }}>Status</p>
+                  <p style={{ margin: 0 }}>{selectedTeam.finished ? "Finished quiz" : "Still in game"}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </>
       ) : null}
 
