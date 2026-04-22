@@ -9,10 +9,7 @@ function normalizeName(value) {
 function validateTeamName(name) {
   if (!name) return "Name required";
   if (name.length < 3) return "Use a proper team name";
-  if (/[@_#]/.test(name)) return "Use a team name, not a username";
-  if (!/[A-Za-z]/.test(name)) return "Team name must include letters";
-  if (/^[a-z0-9-]+$/.test(name)) return "Use a proper team name with spaces or title style";
-  if (!/^[A-Za-z0-9 '&.-]+$/.test(name)) return "Only letters, numbers, spaces and basic punctuation allowed";
+  if (!/^[\w\s&'.-]+$/i.test(name)) return "Only letters, numbers, spaces and basic punctuation allowed";
   return "";
 }
 
