@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { databases, ids } from "../../../../lib/server-appwrite";
 import { getParticipantAuth } from "../../../../lib/auth";
-import { buildParticipantQuestionView, getOrCreateSession, listQuestions } from "../../../../lib/server-quiz";
+import { buildParticipantQuestionView, getOrCreateSession, listQuestions, syncQuizSessionProgress } from "../../../../lib/server-quiz";
 import { QUIZ_RULES } from "../../../../lib/rules";
 import { applyQuestionOrder, getBattleForParticipant, getActiveBattle, runtimeState } from "../../../../lib/runtime-state";
 
@@ -12,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: "Not joined" }, { status: 401 });
     }
 
-    const [participant, session, allQuestions] = await Promise.all([
+    const [participant, rawSession, allQuestions] = await Promise.all([
       databases.getDocument(ids.databaseId, ids.participants, auth.id),
       getOrCreateSession(),
       listQuestions(),
@@ -24,18 +24,22 @@ export async function GET() {
 
     const cappedQuestions = allQuestions.slice(0, QUIZ_RULES.totalQuestions);
     const questions = applyQuestionOrder(cappedQuestions);
+    const session = await syncQuizSessionProgress(rawSession, questions);
     const currentQuestion = questions[session.currentQuestionIndex] || null;
+    const participantBattle = getBattleForParticipant(participant.$id);
+    const activeBattle = getActiveBattle();
+    const currentRound =
+      session.status === "battle" || runtimeState.currentRound === "battle" || !!activeBattle || !!participantBattle
+        ? "battle"
+        : "quiz";
     const currentIsGolden = !!(currentQuestion && runtimeState.goldenQuestionId && currentQuestion.$id === runtimeState.goldenQuestionId);
     const questionEndsAtMs = session?.questionEndsAt ? new Date(session.questionEndsAt).getTime() : 0;
     const questionEnded =
       session.status === "live" &&
-      runtimeState.currentRound === "quiz" &&
+      currentRound === "quiz" &&
       !!currentQuestion &&
       questionEndsAtMs > 0 &&
       Date.now() >= questionEndsAtMs;
-
-    const participantBattle = getBattleForParticipant(participant.$id);
-    const activeBattle = getActiveBattle();
     const battleForClient = participantBattle
       ? {
           id: participantBattle.id,
@@ -87,7 +91,7 @@ export async function GET() {
       },
       goldenQuestionId: runtimeState.goldenQuestionId || null,
       currentIsGolden,
-      currentRound: runtimeState.currentRound,
+      currentRound,
       finalRound: runtimeState.finalRound,
       activeBattle: activeBattle
         ? {
@@ -105,7 +109,7 @@ export async function GET() {
       correctOptionId: questionEnded && currentQuestion ? Number(currentQuestion.correctOption) : null,
       alreadyAnswered: participant.lastAnsweredIndex === session.currentQuestionIndex,
       question:
-        session.status === "live" && runtimeState.currentRound === "quiz"
+        session.status === "live" && currentRound === "quiz"
           ? buildParticipantQuestionView(currentQuestion, participant.$id)
           : null,
     });

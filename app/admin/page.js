@@ -378,10 +378,12 @@ export default function AdminPage() {
             <h2 style={{ marginTop: 0 }}>Quiz Controls</h2>
             <div className="inline-actions">
               <button className="btn btn-primary" disabled={busy} onClick={() => callAdmin("/api/admin/start", "Quiz started")}>Start Round 1</button>
-              <button className="btn btn-alt" disabled={busy || data?.session?.status !== "live"} onClick={() => callAdmin("/api/admin/next", "Next question")}>Next Question</button>
+              <button className="btn btn-alt" disabled={busy || data?.session?.status !== "live"} onClick={() => callAdmin("/api/admin/next", "Skipped to next question")}>Skip To Next</button>
               <button className="btn btn-danger" disabled={busy} onClick={() => callAdmin("/api/admin/end", "Quiz ended")}>End Quiz</button>
             </div>
-            <p className="small" style={{ marginBottom: 0 }}>Current index: {data?.session?.currentQuestionIndex ?? 0}</p>
+            <p className="small" style={{ marginBottom: 0 }}>
+              Current index: {data?.session?.currentQuestionIndex ?? 0}. Questions auto-advance after a {data?.rules?.revealSeconds ?? 4}s reveal.
+            </p>
           </div>
         </>
       ) : null}

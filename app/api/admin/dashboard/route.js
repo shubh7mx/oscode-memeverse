@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Query, databases, ids } from "../../../../lib/server-appwrite";
 import { isAdmin } from "../../../../lib/auth";
-import { cleanQuestionForClient, getOrCreateSession, listQuestions } from "../../../../lib/server-quiz";
+import { cleanQuestionForClient, getOrCreateSession, listQuestions, syncQuizSessionProgress } from "../../../../lib/server-quiz";
 import { QUIZ_RULES } from "../../../../lib/rules";
 import { applyQuestionOrder, runtimeState } from "../../../../lib/runtime-state";
 
@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [session, participantsRes, allQuestions] = await Promise.all([
+    const [rawSession, participantsRes, allQuestions] = await Promise.all([
       getOrCreateSession(),
       databases.listDocuments(ids.databaseId, ids.participants, [Query.orderDesc("score"), Query.limit(500)]),
       listQuestions(),
@@ -19,6 +19,7 @@ export async function GET() {
 
     const cappedQuestions = allQuestions.slice(0, QUIZ_RULES.totalQuestions);
     const questions = applyQuestionOrder(cappedQuestions);
+    const session = await syncQuizSessionProgress(rawSession, questions);
 
     const participants = participantsRes.documents.map((d) => ({
       id: d.$id,

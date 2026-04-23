@@ -45,6 +45,11 @@ export async function POST(req) {
       counterMemeAllowed: body?.counterMemeAllowed ?? runtimeState.finalRound.counterMemeAllowed,
     });
 
+    await databases.updateDocument(ids.databaseId, ids.session, ids.sessionDocId, {
+      status: "battle",
+      questionEndsAt: null,
+    });
+
     return NextResponse.json({ ok: true, battle });
   } catch (e) {
     return NextResponse.json({ error: e?.message || "Create battle failed" }, { status: 500 });
